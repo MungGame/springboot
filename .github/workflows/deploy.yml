@@ -23,3 +23,23 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew build
         shell: bash
+
+      - name: Make zip file #1
+        run: zip -qq -r ./$GITHUB_SHA.zip .
+        shell: bash
+
+      - name: Configure AWS credentials #2
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.ACCESS_KEY_SECRET }}
+          aws-region: eu-west-3
+
+      - name: Upload to S3 #3
+        run: aws s3 cp --region eu-west-3 ./$GITHUB_SHA.zip s3://ety-s3/$GITHUB_SHA.zip
+
+      - name: Code Deploy #4
+        run: aws deploy create-deployment --application-name ety-codedeploy-app
+          --deployment-config-name CodeDeployDefault.OneAtATime
+          --deployment-group-name ety-codedeploy-deployment-group
+          --s3-location bucket=ety-s3,bundleType=zip,key=$GITHUB_SHA.zip
